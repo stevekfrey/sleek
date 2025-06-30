@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { LinearIssue, LinearTeam } from '../types';
+import { LinearIssue, LinearTeam, LinearMilestone } from '../types';
 
 // Use local proxy server to avoid CORS issues
 const LINEAR_API_URL = 'http://localhost:4002/api/linear';
@@ -176,6 +176,25 @@ export class LinearAPI {
 
     const data = await this.query(query, { id });
     return data.issue;
+  }
+
+  async getMilestones(projectId?: string): Promise<LinearMilestone[]> {
+    const query = `
+      query GetMilestones($projectId: ID) {
+        milestones(filter: { project: { id: { eq: $projectId } } }, first: 100) {
+          nodes {
+            id
+            name
+            targetDate
+            projectId
+            description
+          }
+        }
+      }
+    `;
+    const variables = projectId ? { projectId } : undefined;
+    const data = await this.query(query, variables);
+    return data.milestones.nodes;
   }
 }
 

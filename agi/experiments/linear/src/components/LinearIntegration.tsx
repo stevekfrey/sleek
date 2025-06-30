@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+/// <reference types="vite/client" />
+import React, { useState, useEffect } from 'react';
 import { LinearAPI, convertLinearPriority, convertLinearState } from '../services/linearApi';
-import { Project, Task, TeamMember, LinearIssue, LinearTeam } from '../types';
+import { Project, Task, TeamMember, LinearIssue, LinearTeam, LinearMilestone, Milestone } from '../types';
 import { cn } from '../utils/cn';
 import { Key, Download, Users, CheckCircle, AlertCircle } from 'lucide-react';
 
@@ -13,7 +14,9 @@ export const LinearIntegration: React.FC<LinearIntegrationProps> = ({
   onDataImported,
   className
 }) => {
-  const [apiKey, setApiKey] = useState('');
+  // Use env var if available
+  const envApiKey = import.meta.env.VITE_LINEAR_API_KEY || '';
+  const [apiKey, setApiKey] = useState(envApiKey);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [teams, setTeams] = useState<LinearTeam[]>([]);
@@ -22,6 +25,18 @@ export const LinearIntegration: React.FC<LinearIntegrationProps> = ({
     issues: LinearIssue[];
     teamMembers: TeamMember[];
   } | null>(null);
+
+  // When teams are loaded, select 'AGI' if present
+  useEffect(() => {
+    if (teams.length > 0) {
+      const agiTeam = teams.find(t => t.name.toLowerCase() === 'agi');
+      if (agiTeam) {
+        setSelectedTeam(agiTeam.id);
+      } else {
+        setSelectedTeam(teams[0].id);
+      }
+    }
+  }, [teams]);
 
   const handleConnect = async () => {
     if (!apiKey.trim()) {
@@ -84,11 +99,37 @@ export const LinearIntegration: React.FC<LinearIntegrationProps> = ({
     }
   };
 
-  const handleCreateProject = () => {
+  const handleCreateProject = async () => {
     if (!importedData) return;
 
     const selectedTeamData = teams.find(t => t.id === selectedTeam);
-    
+    const linearApi = new LinearAPI(apiKey);
+    let milestones: Milestone[] = [];
+    try {
+      const linearMilestones: LinearMilestone[] = await linearApi.getMilestones(selectedTeam);
+      milestones = linearMilestones.map((m) => {
+        const dueDate = new Date(m.targetDate);
+        let status: Milestone['status'] = 'UPCOMING';
+        const now = new Date();
+        if (dueDate.toDateString() === now.toDateString()) {
+          status = 'IN_PROGRESS';
+        } else if (dueDate < now) {
+          status = 'COMPLETED';
+        }
+        return {
+          id: m.id,
+          title: m.name,
+          description: m.description,
+          dueDate,
+          status,
+          tasks: [] // Could be mapped if available
+        };
+      });
+    } catch (err) {
+      // If milestone fetch fails, fallback to empty
+      milestones = [];
+    }
+
     // Convert Linear issues to our Task format
     const tasks: Task[] = importedData.issues.map(issue => ({
       id: issue.id,
@@ -115,7 +156,7 @@ export const LinearIntegration: React.FC<LinearIntegrationProps> = ({
       status: 'ACTIVE',
       teamMembers: importedData.teamMembers,
       tasks,
-      milestones: [] // Linear doesn't have milestones, so we'll leave this empty
+      milestones
     };
 
     onDataImported(project);

@@ -61,11 +61,13 @@ export interface LinearIssue {
   createdAt: string;
   updatedAt: string;
   dueDate?: string;
-  labels: Array<{
-    id: string;
-    name: string;
-    color: string;
-  }>;
+  labels: {
+    nodes: Array<{
+      id: string;
+      name: string;
+      color: string;
+    }>;
+  };
   team: {
     id: string;
     name: string;
@@ -85,4 +87,13 @@ export interface FilterOptions {
   priority?: string;
   status?: string;
   tags?: string[];
+}
+
+export interface LinearMilestone {
+  id: string;
+  name: string;
+  targetDate: string;
+  projectId: string;
+  description?: string;
+  // Add other fields as needed from Linear's API
 } 

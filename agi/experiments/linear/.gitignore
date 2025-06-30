@@ -1,3 +1,4 @@
 .yoyo/snapshot/
 .yoyo/snapshot/
 node_modules/
+.env.local 

@@ -7,7 +7,7 @@ const PORT = 4002;
 
 // Enable CORS for both 4000 and 4001
 app.use(cors({
-  origin: ['http://localhost:4000', 'http://localhost:4001', 'http://localhost:4003'],
+  origin: ['http://localhost:4000', 'http://localhost:4001', 'http://localhost:4002', 'http://localhost:4003'],
   credentials: true
 }));
 
